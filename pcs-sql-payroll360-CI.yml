@@ -1,0 +1,66 @@
+# Variable 'SQLservername' was defined in the Variables tab
+# Variable Group 'Config Variables' was defined in the Variables tab
+# Variable Group 'KeyVault Variable for QA environment' was defined in the Variables tab
+trigger:
+  branches:
+    exclude:
+    - refs/heads/master
+jobs:
+- job: Job_1
+  displayName: ARM Template
+  pool:
+    vmImage: vs2017-win2016
+  steps:
+  - checkout: self
+  - task: AzureResourceManagerTemplateDeployment@3
+    displayName: 'ARM Template deployment: Resource Group scope'
+    inputs:
+      ConnectedServiceName: a7523577-9a30-469a-9e3a-b0ad615ad2b5
+      subscriptionName: 8aa224f7-539d-46b5-a81f-385ad15a78ab
+      resourceGroupName: pcs-rg-payroll360-project-dev
+      location: East US
+      csmFile: sql-arm-template/azuredeploy.json
+      csmParametersFile: sql-arm-template/azuredeploy.parameters.json
+      overrideParameters: -administratorLogin $(administratorLogin) -administratorLoginPassword $(administratorLoginPassword) -serverName $(serverName) -elasticPoolName $(elasticPoolName) -edition Standard -capacity $(capacity) -databaseCapacityMin $(databaseCapacityMin) -databaseCapacityMax $(databaseCapacityMax) -databasesNames ["$(DBname1)","$(DBname2)"] -databaseCollation $(databaseCollation) -location $(location)
+      deploymentMode: Validation
+  - task: CopyFiles@2
+    displayName: 'Copy Files to: $(Build.ArtifactStagingDirectory)'
+    inputs:
+      SourceFolder: sql-arm-template
+      Contents: '*.json'
+      TargetFolder: $(Build.ArtifactStagingDirectory)
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Artifact: ARMTemplate'
+    inputs:
+      ArtifactName: ARMTemplate
+- job: Job_2
+  displayName: Config
+  pool:
+    vmImage: vs2017-win2016
+  steps:
+  - checkout: self
+  - task: MSBuild@1
+    displayName: Build solution config/config.sqlproj
+    inputs:
+      solution: config/config.sqlproj
+      msbuildArguments: /p:OutDir=$(Build.ArtifactStagingDirectory)
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Artifact: config'
+    inputs:
+      ArtifactName: config
+- job: Job_3
+  displayName: Ingestion
+  pool:
+    vmImage: vs2017-win2016
+  steps:
+  - checkout: self
+  - task: MSBuild@1
+    displayName: Build solution Ingestion/Ingestion.sqlproj
+    inputs:
+      solution: Ingestion/Ingestion.sqlproj
+      msbuildArguments: /p:OutDir=$(Build.ArtifactStagingDirectory)
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Artifact: Ingestion'
+    inputs:
+      ArtifactName: Ingestion
+...

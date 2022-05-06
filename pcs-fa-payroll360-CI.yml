@@ -1,0 +1,20 @@
+jobs:
+- job: Job_1
+  displayName: Agent job 1
+  pool:
+    vmImage: vs2017-win2016
+  steps:
+  - checkout: self
+  - task: DotNetCoreCLI@2
+    displayName: Build project
+    inputs:
+      projects: '**/*.csproj'
+      arguments: --output publish_output --configuration Release
+  - task: ArchiveFiles@2
+    displayName: Archive files
+    inputs:
+      rootFolderOrFile: publish_output/
+      includeRootFolder: false
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Artifact: drop'
+...
